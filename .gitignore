@@ -1,0 +1,39 @@
+# Local datasets, model weights, and generated results
+/datas/
+/models/weights/
+/outputs/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.mp4
+*.avi
+*.mov
+
+# Python environments and caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+*.egg-info/
+build/
+dist/
+
+# Local credentials and editor files
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+*.dmp
+core
+core.*
+~$*.docx

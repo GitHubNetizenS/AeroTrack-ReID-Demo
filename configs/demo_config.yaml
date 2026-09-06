@@ -1,0 +1,209 @@
+# demo_config.yaml文件
+#     该YAML文件用于完整Demo流水线：视频车辆检测、ROI过滤、跟踪、静止判定、车牌OCR与ReID归档。
+
+io:
+  video_path: "datas/video/fly_part.mp4"
+  output_dir: "outputs/demo"
+  output_video: "outputs/demo/demo_annotated.mp4"
+  summary_csv: "outputs/demo/summary.csv"
+  manifest_json: "outputs/demo/manifest.json"
+  ocr_debug_csv: "outputs/demo/ocr_debug.csv"
+  appearance_review_csv: "outputs/demo/appearance_review.csv"
+  raw_crops_dir: "outputs/demo/raw_crops"
+  vehicles_dir: "outputs/demo/vehicles"
+
+runtime:
+  start_frame: 0
+  end_frame: 4711
+  detect_interval: 5
+  save_static_every: 60
+  max_crops_per_track: 40
+  output_scale: 0.5
+
+model:
+  type: "yolov8"
+  weights_path: "models/weights/yolo11l.pt"
+  confidence_threshold: 0.25
+  device: "cuda:0"
+
+sahi:
+  slice_height: 1024
+  slice_width: 1024
+  overlap_height_ratio: 0.2
+  overlap_width_ratio: 0.2
+
+filter:
+  target_classes: [2, 5, 7]
+  min_confidence: 0.25
+  min_area_ratio: 0.00008
+  max_area_ratio: 0.15
+  aspect_ratio_range: [0.45, 4.5]
+  min_roi_overlap: 0.2
+  flight_segments:
+    - name: "outbound"
+      start_frame: 0
+      end_frame: 2070
+      action: "track"
+      roi_keyframes:
+        - frame: 0
+          polygon: [[1604, 0], [2105, 0], [3096, 2159], [883, 2159]]
+        - frame: 1035
+          polygon: [[1870, 148], [2266, 138], [3246, 2159], [1228, 2205]]
+        - frame: 1800
+          polygon: [[1815, 221], [2723, 203], [3804, 1519], [1051, 1681]]
+        - frame: 2070
+          polygon: [[1676, 654], [2779, 673], [3839, 2159], [1083, 2159]]
+    - name: "u_turn"
+      start_frame: 2071
+      end_frame: 2550
+      action: "suspend"
+    - name: "return"
+      start_frame: 2551
+      end_frame: 4711
+      action: "track"
+      roi_keyframes:
+        - frame: 2551
+          polygon: [[1597, 71], [1958, 80], [3432, 2159], [908, 2159]]
+        - frame: 3630
+          polygon: [[1562, 171], [1995, 171], [2966, 2159], [479, 2159]]
+        - frame: 4315
+          polygon: [[1046, 432], [1756, 403], [1766, 2140], [0, 1785]]
+        - frame: 4711
+          polygon: [[0, 953], [1183, 941], [1519, 2159], [0, 2159]]
+
+tracking:
+  tracker_type: "botsort"
+  frame_rate: 30
+  fallback_iou_tracker: true
+  fallback_start_id: 10000
+  fallback_iou_thresh: 0.25
+  fallback_second_iou_thresh: 0.12
+  fallback_high_thresh: 0.45
+  fallback_low_thresh: 0.10
+  fallback_max_age: 30
+  track_high_thresh: 0.25
+  track_low_thresh: 0.1
+  new_track_thresh: 0.25
+  track_buffer: 120
+  match_thresh: 0.8
+  fuse_score: True
+  gmc_method: "sparseOptFlow"
+  proximity_thresh: 0.5
+  appearance_thresh: 0.25
+  with_reid: False
+
+stationary:
+  min_observations: 4
+  vote_window: 6
+  required_votes: 3
+  max_residual_px: 45.0
+
+supplemental_crops:
+  enabled: true
+  # 当车辆靠近ROI边界导致检测器漏框，但原始帧中车牌清楚时，可在这里补充人工框选的原始帧crop。
+  # 使用manual_crop_calibrator.py获取bbox；plate_hint可选，OCR失败时才作为最终Demo归档提示。
+  items:
+    - frame: 4285
+      track_id: 90003
+      plate_hint: "湘CA755L"
+      bbox: [518, 854, 1784, 1746]
+      padding_ratio: 0.02
+    - frame: 4315
+      track_id: 90003
+      plate_hint: "湘CA755L"
+      bbox: [144, 950, 1650, 1968]
+      padding_ratio: 0.02
+    - frame: 4345
+      track_id: 90003
+      plate_hint: "湘CA755L"
+      bbox: [ 0, 1056, 1592, 2130 ]
+      padding_ratio: 0.02
+
+ocr:
+  enabled: true
+  engine: "paddleocr"
+  lang: "ch"
+  device: "cpu"
+  fallback_to_cpu: false
+  ocr_version: "PP-OCRv4"
+  enable_mkldnn: false
+  min_confidence: 0.35
+  max_crops_per_track: 8
+  isolate_paddle_process: true
+  ocr_timeout_sec: 30
+  max_subprocess_failures: 20
+  plate_detector_enabled: true
+  max_plate_candidates: 3
+  plate_candidate_min_area_ratio: 0.0008
+  plate_candidate_max_area_ratio: 0.12
+  plate_candidate_aspect_ratio_range: [1.6, 7.5]
+  plate_candidate_min_center_y_ratio: 0.08
+  plate_candidate_min_top_margin_ratio: 0.025
+  plate_preprocess_scale: 2.0
+  plate_preprocess_modes: ["raw", "clahe"]
+  min_ocr_crop_width: 18
+  min_ocr_crop_height: 8
+  max_ocr_crop_pixels: 900000
+  max_preprocess_long_side: 960
+  allow_partial_plate_text: true
+
+reid:
+  embedding_model: "resnet50"
+  merge_by_appearance: false
+  appearance_quality_check: true
+  appearance_warning_threshold: 0.45
+  appearance_track_warning_threshold: 0.50
+  appearance_review_max_crops_per_vehicle: 32
+  cluster_eps: 0.18
+  min_samples: 1
+
+postprocess:
+  use_expected_plates: false
+  keep_unknown: false
+  min_crop_count: 1
+  plate_max_edit_distance: 2
+  default_plate_province: "湘"
+  default_plate_city_letter: "C"
+  # plate_aliases用于人工复核后的少量OCR纠错；默认留空，避免把答案写死到通用流程。
+  plate_aliases:
+    "湘C0935C": "湘CD935C"
+    "湘CD9350": "湘CD935C"
+    "湘CAL132": "湘CAZ732"
+    "湘CCD95C": "湘CC095C"
+    "湘CC0950": "湘CC095C"
+    "湖C75168": "湘CF75168"
+    "相CD935C": "湘CD935C"
+    "湘CAZ73Z": "湘CAZ732"
+    "湘N18180": "湘N1818D"
+    "湘C60Y29": "湘C6DY29"
+    "F75168": "湘CF75168"
+    "CF75168": "湘CF75168"
+    "C75168": "湘CF75168"
+  soft_expected_plate_matching: true
+  merge_near_duplicate_plate_text: true
+  near_duplicate_max_distance: 1
+  near_duplicate_small_group_max_crops: 2
+  assign_unobserved_crops_to_dominant_plate: false
+  observation_neighbor_crops: 1
+  drop_minor_conflicting_plate_observations: true
+  dominant_plate_min_votes: 2
+  dominant_plate_score_ratio: 1.25
+  # manual_track_plate_overrides用于人工复核后的最终Demo补救；仅当某条track稳定漏OCR时使用。
+  # 可写成 "track_id": "车牌"，也可写成带帧范围的形式，只归档该track的指定帧段。
+  manual_track_plate_overrides:
+    "10052": "湘CF75168"
+    "10029":
+      plate: "湘CA755L"
+      start_frame: 4075
+      end_frame: 4255
+  # expected_plates用于“人工校验后的Demo交付修正模式”。默认不开启，避免把人工答案硬编码进通用流程。
+  # 如果需要只输出人工确认的8辆车，可将use_expected_plates改为true。
+  expected_plates:
+    - "湘CAZ732"
+    - "湘C6DY29"
+    - "湘CC095C"
+    - "湘N1818D"
+    - "湘CF75168"
+    - "湘C726Z8"
+    - "湘CA755L"
+    - "湘CD935C"

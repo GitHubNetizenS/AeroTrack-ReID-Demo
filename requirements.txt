@@ -1,0 +1,10 @@
+opencv-python
+numpy
+PyYAML
+sahi
+ultralytics
+torch
+torchvision
+scikit-learn
+paddleocr==3.3.0
+paddlepaddle==3.2.0
